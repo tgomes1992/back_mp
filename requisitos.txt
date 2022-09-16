@@ -1,0 +1,15 @@
+O que precisa estar no backup?
+
+
+1 - Histórico de Cotas.(Pegasus)
+
+2 - Histórico de Movimentações.(Centaurus , Escriturador)
+
+3 - Posições no Final de cada Mês.(Centaurus , Escriturador)
+
+4 - Eventos (Memória de Cálculo de Eventos) (Centaurus , Escriturador).
+
+
+
+
+O Inicio da Maps foi em 2016.

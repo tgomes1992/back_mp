@@ -1,8 +1,23 @@
-from .MAPS_MODULE.extracoes import MapsCentaurus
+import email
+from MAPS_MODULE.extracoes import Maps, MapsCentaurus , MapsEscriturador
 from sqlalchemy import create_engine
-from datetime import date
+from datetime import date, datetime , timedelta
 import pandas as pd
 from dbengine import engine_fundo
+
+
+
+engine_teste = create_engine("mysql+pymysql://root:tAman1993**@localhost/batimentos_o2_maps")
+
+engine_besa = create_engine("sqlite:///besa.db")
+
+
+# ativos_maps = pd.read_sql("ativos_maps", con=engine_teste)
+
+
+# ativos_maps.to_csv("teste.csv")
+
+# print (ativos_maps)
 
 
 
@@ -20,19 +35,18 @@ class Login():
 
 
 
-
-
 class ExtratorMaps():
 
-    engine = create_engine("sqlite:///DBS/POLICARDII.db")
-    login  = Login('backup/login.xlsx').get_login()
+    
+    path = "//Scototrj01/h/CUSTODIA/7 Escrituração de Ativos/1 - Controle das Operações/Batimentos/data_files"
+
+    login  = Login(f'{path}/login.xlsx').get_login()
     cent = MapsCentaurus(login['login'],login['password'])
     pd.options.display.float_format = '{:.2f}'.format
 
 
     def __init__(self,data):
-        self.data = data
-        
+        self.data = data        
 
     def extrair_cotas_posicao(self,papel_cota):
         data_inicial = date(2021,12,31)
@@ -74,5 +88,22 @@ class ExtratorMaps():
             "quantidade_movimentacoes" :  [df.count()['Tipo Operação']]
         }
         return resultado
+
+
+
+escriturador = MapsEscriturador("pamela.leal",'Fevereiro2023')
+
+
+datainicial = datetime(2017,1,1)
+datafim =  datetime(2022,10,26)
+while datainicial != datafim:
+    print (datainicial)
+    df = escriturador.movimentos(5012351,datainicial.strftime("%Y-%m-%d"))
+    if not df.empty:
+        df.to_sql("movimentacoes",con=engine_besa, if_exists="append",index=False)
+    datainicial = datainicial + timedelta(days=1)
+
+
+
 
 

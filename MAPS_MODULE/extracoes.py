@@ -38,39 +38,90 @@ class Maps():
         return s
 
 class MapsEscriturador(Maps):
-    def ativos_escriturador(self):
+
+    def login_escriturador(self):
         with requests.Session() as s:
-            # Finding the authentication needed to gain access to Pegasus Module
-            url = 'https://ot.cloud.mapsfinancial.com/escriturador/app'
+            url = "https://ot.cloud.mapsfinancial.com/escriturador/login" 
             r = s.get(url)
-            # Extracting the complete url with all the parameter
             soup = BeautifulSoup(r.content, 'html5lib')
             x = soup.find('form')['action']
-            # Making my posting requesting
-            r = s.post(x, data=self.formlogin())
-            print(f'Você está logado...')
-            # Get my "pendencia_screen"   
+            r = s.post(x, data=self.formlogin())            
+        return s
+
+    def ativos_escriturador(self):
+        with self.login_escriturador() as s:
             ativos_escriturador = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/ativos/relatorio"
             r = s.get(ativos_escriturador)    
-            open(f"tempfiles/Consulta Ativos.xlsx",'wb').write(r.content)
+            open(f"Consulta Ativos.xlsx",'wb').write(r.content)
             #add_to_base(pd_table)
             logging.info(f'Extração Ativos escriturador,realizada com sucesso')
             time.sleep(1)
             s.close()
 
-    def movimentos(self):
-        with requests.Session() as s:
-            url = 'https://ot.cloud.mapsfinancial.com/escriturador/app'
-            r = s.get(url)
-            soup = BeautifulSoup(r.content, 'html5lib')
-            x = soup.find('form')['action']
-            r = s.post(x, data=self.formlogin())
-            print(f'Você está logado...')
-            ativos_escriturador = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/movimentacoes?identificadorInvestidor=&dataInicio=2022-01-01&dataFim=2022-01-31&depositaria=1&filtrarTipo=true&pagina"
-            r = s.get(ativos_escriturador)   
-            df = pd.DataFrame.from_dict(json.loads(r.content))
-            df.to_excel("movimentos_b3.xlsx")
-            
+    def movimentos(self,ativoid,datainicial):
+        '''data no formato  yyyy-mm-dd'''   
+        with self.login_escriturador() as s:
+            movimentos = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/movimentacoes?identificadorInvestidor=&dataInicio=2022-01-01&dataFim=2022-01-31&depositaria=1&filtrarTipo=true&pagina"
+            movimentos2 = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/movimentacoes?ativoId={ativoid}&identificadorInvestidor=&dataInicio={datainicial}&dataFim={datainicial}&depositaria=3&filtrarTipo=true&pagina"
+            r = s.get(movimentos2)   
+            # df = pd.DataFrame.from_dict(json.loads(r.content))
+            return json.loads(r.content)
+
+
+    def movimentos_escriturais(self, datainicial): 
+        '''data no formato  yyyy-mm-dd'''   
+        with self.login_escriturador() as s:
+            try:
+                movimentos = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/movimentacoes?identificadorInvestidor=&dataInicio=2022-01-01&dataFim=2022-01-31&depositaria=1&filtrarTipo=true&pagina"
+                movimentos2 = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/movimentacoes?identificadorInvestidor=&dataInicio={datainicial}&dataFim={datainicial}&depositaria=3&filtrarTipo=true&pagina"
+                r = s.get(movimentos2)   
+                # df = pd.DataFrame.from_dict(json.loads(r.content))
+                retorno = json.loads(r.content)
+                if len(retorno)  == 0:
+                    return [{"resultado": "Sem Movimentos"}]
+                else:
+                    return retorno
+            except Exception as e:
+                print (e)
+                return [{"resultado": "Sem Movimentos"}]
+
+    
+    def consulta_eventos(self,data,depositaria):
+        '''data no formato  yyyy-mm-dd'''
+        try:
+            with self.login_escriturador() as s:
+                relatorio = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/eventosEfetivados/findEventosEfetivadosDinheiro?dataLiquidacao={data}&depositaria={depositaria}&pagina"
+                relatorio2 = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/eventosEfetivados/countEventosEfetivadosDinheiro?dataLiquidacao={data}&depositaria={depositaria}"
+                r = s.get(relatorio2)
+                print (r.content)
+                if int(r.content.decode('utf-8'))> 0:
+                    r = s.get(relatorio)       
+                    base = json.loads(r.content.decode('utf-8'))
+                    return  base
+                elif int(r.content.decode('utf-8')) == 0:
+                    return [{'resultado':"sem eventos"  ,"depositaria": depositaria}]
+        except Exception as e:
+            print(e)
+            print ("Sem Evento para o dia requisitado")
+            return [{'resultado':"erro"}]
+
+
+    def ativos_df(self):
+        try:
+            with self.login_escriturador() as s:
+                relatorio = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/ativos?pagina"
+                
+                r = s.get(relatorio)
+                print (r)
+                base = json.loads(r.content.decode('utf-8'))['elementos']
+                resultado = pd.DataFrame.from_dict(base)
+                return  resultado
+        except Exception as e:
+            print ("erro na requisição")
+            print (e)
+
+        
+
 
 
 class MapsPegasus(Maps):
@@ -145,6 +196,19 @@ class MapsPegasus(Maps):
 
 
 class MapsCentaurus(Maps):
+
+    def ajustar_df(self , df):
+        investidor = ""
+        ndf = []
+        for item in df.iterrows():
+            if 'Investidor' in str(item[1]['Nº Operação']):
+                investidor = item[1]['Nº Operação']
+            base_dict = item[1].to_dict()
+            base_dict['investidor'] = investidor.replace("Investidor: ", "")
+            ndf.append(base_dict)
+        novodf = pd.DataFrame.from_dict(ndf)
+        return novodf[(novodf['Status'].notna()) & (novodf['Status'] != "Status") ].to_dict()
+
     def form_centaurus_unique(self,papel,dt_i,dt_f):
         form_centaurus = {
                 "id1f_hf_0": "",
@@ -191,13 +255,13 @@ class MapsCentaurus(Maps):
                         "Valor IR","Valor Impostos Compensados","Taxa Operacional","Valor Líquido",
                         "Status"]].iloc[1: , :])
 
-    def extrair_movimentacoes_fundo(self,papelcota,dt_i,dt_f):
+    def extrair_movimentacoes_fundo(self,papelcota,dt_i):
         form = {
             "ida_hf_0": "" , 
             "papelCota:control-group:control-group_body:_input": papelcota, 
             "tipoDataPesquisa": "0", 
             "dataInicio:control-group:control-group_body:_input": dt_i, 
-            "dataFim:control-group:control-group_body:_input": dt_f, 
+            "dataFim:control-group:control-group_body:_input": dt_i, 
             "tiposMovimento": "",
             "distribuidor": "",
             "pageCommands:elements:0:cell": "Pesquisar", 
@@ -217,7 +281,8 @@ class MapsCentaurus(Maps):
             r = s.get(excel_get)
             df = pd.read_excel(BytesIO(r.content),skiprows=4)
             df['mnemonico'] = papelcota
-            return df[(df['Status'].notna()) & (df['Status'] != "Status") ]
+            # return df[(df['Status'].notna()) & (df['Status'] != "Status") ].to_dict()
+            return self.ajustar_df(df)
             
 
       
@@ -239,7 +304,7 @@ class MapsCentaurus(Maps):
                 df = pd.read_csv(BytesIO(r.content),delimiter=";")
                 df.rename(columns={"Papel Cota": "papelcota"})
  
-                return df[df['Tipo Pessoa'].notna()]
+                return df[df['Tipo Pessoa'].notna()].to_dict()
             except Exception as e:
                 return "na"
 
@@ -329,20 +394,21 @@ class MapsCentaurus(Maps):
 
 
 
-base = {}
-base['Carteira'] = []
-base['Cota'] = []
-base['Data']  = []
-base['Valor da Cota'] = []
-base['Patrimônio Líquido'] = []
-base['Valor das Emissões'] = []
-base['Qtde. de Cotas das Emissões'] = []
-base['Valor dos Resgates'] = []
-base['Qtde. de Cotas dos Resgates'] = []
-base['Qtde. de Cotas Total'] = []
 
 
 def add_to_base(df):
+    
+    base = {}
+    base['Carteira'] = []
+    base['Cota'] = []
+    base['Data']  = []
+    base['Valor da Cota'] = []
+    base['Patrimônio Líquido'] = []
+    base['Valor das Emissões'] = []
+    base['Qtde. de Cotas das Emissões'] = []
+    base['Valor dos Resgates'] = []
+    base['Qtde. de Cotas dos Resgates'] = []
+    base['Qtde. de Cotas Total'] = []   
     for row in df.iterrows():
         base['Carteira'].append(row[1]['Carteira'])
         base['Cota'].append(row[1]['Cota']) 
@@ -354,6 +420,7 @@ def add_to_base(df):
         base['Valor dos Resgates'].append(row[1]['Valor dos Resgates']) 
         base['Qtde. de Cotas dos Resgates'].append(row[1]['Qtde. de Cotas dos Resgates']) 
         base['Qtde. de Cotas Total'].append(row[1]['Qtde. de Cotas Total']) 
+    return base
 
 
 def movimentacao():
@@ -645,22 +712,6 @@ def movimentacoes_escriturais(dtini):
         print ("erro na requisição")
         pass
 
-def ativos_df():
-    try:
-        with requests.Session() as s:
-            url = 'https://ot.cloud.mapsfinancial.com/escriturador/app'
-            r = s.get(url, headers=headers)
-            soup = BeautifulSoup(r.content, 'html5lib')
-            x = soup.find('form')['action']
-            r = s.post(x, data=form, headers=headers)
-            relatorio = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/ativos?pagina"
-            r = s.get(relatorio,headers=headers)
-            base = json.loads(r.content.decode('utf-8'))['elementos']
-            resultado = pd.DataFrame.from_dict(base)
-            return  resultado
-    except:
-        print ("erro na requisição")
-        pass
 
 
 def ativos_detalhe(id):
@@ -685,23 +736,6 @@ def ativos_detalhe(id):
 
 #consultaeventosefetivados em dinheiro
 
-
-def consulta_eventos(data):
-    '''data no formato  yyyy-mm-dd'''
-    try:
-        with requests.Session() as s:
-            url = 'https://ot.cloud.mapsfinancial.com/escriturador/app'
-            r = s.get(url, headers=headers)
-            soup = BeautifulSoup(r.content, 'html5lib')
-            x = soup.find('form')['action']
-            r = s.post(x, data=form, headers=headers)
-            relatorio = f"https://ot.cloud.mapsfinancial.com/escriturador/rest/eventosEfetivados/findEventosEfetivadosDinheiro?dataLiquidacao={data}&pagina"
-            r = s.get(relatorio,headers=headers)
-            base = json.loads(r.content.decode('utf-8'))
-            return  base
-    except:
-        print ("erro na requisição")
-        
 
 
 

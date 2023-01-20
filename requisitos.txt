@@ -1,15 +1,56 @@
 O que precisa estar no backup?
 
+O que o app vai fazer?  
 
-1 - Histórico de Cotas.(Pegasus)
-
-2 - Histórico de Movimentações.(Centaurus , Escriturador)
-
-3 - Posições no Final de cada Mês.(Centaurus , Escriturador)
-
-4 - Eventos (Memória de Cálculo de Eventos) (Centaurus , Escriturador).
+Extrair os itens abaixo dos respectivos sistemas.
 
 
+    1 - Histórico de Cotas(Pegasus)
+
+    2 - Histórico de Movimentações.(Centaurus , Escriturador)
+
+    3 - Posições no Final de cada Mês.(Centaurus , Escriturador)
+
+    4 - Eventos (Memória de Cálculo de Eventos) (Centaurus , Escriturador).
 
 
-O Inicio da Maps foi em 2016.
+
+
+
+
+Roteiro de Extração
+
+
+    1 - Cotas Pegasus   
+    2 - Posições no final de cada mês.
+    3 - Movimentações (Centaurus e Escriturador)
+    4 - Eventos
+
+
+Pegasus 
+    - Logar no pegasus.
+    - Extrair Cotas.
+
+Centaurus
+
+    - Logar no Centaurus.
+    - Extrair Movimentações.
+    - Extrair Posiões do dia a dia.
+    - Extrair  a memória de cálculo dos eventos. 
+
+
+Escriturador
+
+    -Logar no escriturador.
+    -Extrair as Movimentações.
+    -Extrair as Posições.
+    -Extrair os Eventos.
+
+
+
+Observações
+
+
+    O Start da Maps foi em 2016.
+    
+

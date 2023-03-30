@@ -6,16 +6,16 @@ import pymongo
 
 
 class ExtracaoMovimentacao():
-    escriturador = MapsEscriturador("pamela.leal","Fevereiro2023")
-    centaurus = MapsCentaurus("thiago.conceicao",'tAman2024**')
+    escriturador = MapsEscriturador("marcella.rodrigues@oliveiratrust.com.br","#Mdetrano16")
+    centaurus = MapsCentaurus("thiago.conceicao",'tAman2021**')
 
     def __init__(self, data , mongo_conection   ):
         '''a data , precisa ser a data inicial no formato datetime'''
         self.data = data
         self.mongo_conection  = mongo_conection
-        self.db = "backup_maps" 
+        self.db = "movimentos_abertos2" 
         # self.today = datetime.today()
-        self.today = datetime(2023,1,1)
+        self.today = datetime(2022,6,2)
 
 
     def movimentos_escriturador(self):
@@ -26,11 +26,26 @@ class ExtracaoMovimentacao():
             self.mongo_conection[self.db]["movimentos_escriturador"].insert_many(movimentos)
             self.data = self.data + timedelta(days=1)
 
-    def movimentos_centaurus(self , papel_cota):
-        while self.data < self.today:
-            movimentos_centaurus = self.centaurus.extrair_movimentacoes_fundo(papel_cota ,  self.data)
+    def movimentos_centaurus(self , papel_cota):       
+        while self.data < self.today:            
+            print (f"Extração {papel_cota} {self.data.strftime('%Y-%m-%d')}  ")
+            movimentos_centaurus = self.centaurus.extrair_movimentacoes_fundo(papel_cota ,  self.data.strftime("%d/%m/%Y"))
+            print (movimentos_centaurus)
+            self.mongo_conection[self.db]["movimentos_centaurus"].delete_many({"mnemonico":  papel_cota ,  "data": self.data.strftime("%d/%m/%Y") })
             self.mongo_conection[self.db]["movimentos_centaurus"].insert_many(movimentos_centaurus)
             self.data = self.data + timedelta(days=1)
+
+
+    def movimentos_fundos_abertos(self , papel_cota):       
+        while self.data < self.today:            
+            print (f"Extração {papel_cota} {self.data.strftime('%Y-%m-%d')}  ")
+            movimentos_centaurus = self.centaurus.extrair_movimentacoes_fundo(papel_cota ,  self.data.strftime("%d/%m/%Y"))
+            print (movimentos_centaurus)
+            self.mongo_conection[self.db][papel_cota.replace(" ","_")].delete_many({"mnemonico":  papel_cota ,  "data": self.data.strftime("%d/%m/%Y") })
+            self.mongo_conection[self.db][papel_cota.replace(" ","_")].insert_many(movimentos_centaurus)
+            self.data = self.data + timedelta(days=1)
+
+
 
 
     def extracao_eventos_escriturador(self , depositaria):

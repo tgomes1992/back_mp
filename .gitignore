@@ -1,4 +1,7 @@
 *.pyc*
 *.sqlite3*
 *.db*
+*.xlsx*
+*.txt*
+
 

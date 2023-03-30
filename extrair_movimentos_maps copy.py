@@ -35,7 +35,7 @@ def get_investidores(nome):
 
 def gerar_planilha_importacao(papelcota , cd_fundo ,  data , path):
 
-    col = myclient['movimentos_abertos']['XP_SO_FIP_-_CLASSE_B'].find({"data": data})
+    col = myclient['movimentos_abertos2']['JIVE_BOSSANOVA_HIGH_YIELD_ADVISORY_FIC_FIM_CP'].find({"data": data})
     df = pd.DataFrame.from_dict(col)
     df['cotista'] = df['investidor'].apply(get_investidores)
     df['fundo'] = cd_fundo
@@ -48,29 +48,29 @@ def gerar_planilha_importacao(papelcota , cd_fundo ,  data , path):
     df[[ 'data' ,  'tipo'  ,  'cotista' , "fundo"  , 'liquidacao'  , 'valor' , 'qtdcotas' ]].to_excel(f'{path}/{data.replace("/","")}.xlsx' , index=False)
 
 
-
-
-# with open('fundos_backup.txt','r') as arquivo:
-#     for item in arquivo:
-#         fundo =  item.replace("\n","")        
-#         print (fundo)
-#         data_inicial = datetime(2022,5,9)
-#         movimentos = ExtracaoMovimentacao(data_inicial, myclient)
-#         movimentos.movimentos_fundos_abertos(fundo)
+with open('fundos_backup.txt','r') as arquivo:
+    for item in arquivo:
+        fundo =  item.replace("\n","")        
+        print (fundo)
+        data_inicial = datetime(2022,5,30)
+        movimentos = ExtracaoMovimentacao(data_inicial, myclient)
+        movimentos.movimentos_fundos_abertos(fundo)
       
 
 
 
-data_inicial = datetime(2022,5,9)
+
+
+
+data_inicial = datetime(2022,5,30)
 data_final = datetime.today()
 atualizar_investidor()
 
 while data_inicial < data_final:
     try:
         print (data_inicial)
-        gerar_planilha_importacao("XP SO FIP - CLASSE B" ,  '32211_CLB' , data_inicial.strftime("%d/%m/%Y") , "xpso")
+        gerar_planilha_importacao("JIVE BOSSANOVA HIGH YIELD ADVISORY FIC FIM CP" ,  '30991' , data_inicial.strftime("%d/%m/%Y") , "JIVE")
         data_inicial = data_inicial + timedelta(days=1)
-
     except Exception as e :
         data_inicial = data_inicial + timedelta(days=1)
         continue

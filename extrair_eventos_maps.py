@@ -13,3 +13,4 @@ data_inicial = datetime(2017,1,1)
 movimentos = ExtracaoMovimentacao(data_inicial, myclient)
 '''extrai todas as movimentações escriturais'''
 movimentos.extrair_eventos_por_depositaria()
+movimentos.movimentos_escriturador()

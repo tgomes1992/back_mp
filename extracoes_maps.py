@@ -12,15 +12,6 @@ engine_teste = create_engine("mysql+pymysql://root:tAman1993**@localhost/batimen
 engine_besa = create_engine("sqlite:///besa.db")
 
 
-# ativos_maps = pd.read_sql("ativos_maps", con=engine_teste)
-
-
-# ativos_maps.to_csv("teste.csv")
-
-# print (ativos_maps)
-
-
-
 class Login():
 
     def __init__(self,path):

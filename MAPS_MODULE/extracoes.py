@@ -207,7 +207,7 @@ class MapsCentaurus(Maps):
             base_dict['investidor'] = investidor.replace("Investidor: ", "")
             ndf.append(base_dict)
         novodf = pd.DataFrame.from_dict(ndf)
-        return novodf[(novodf['Status'].notna()) & (novodf['Status'] != "Status") ].to_dict()
+        return novodf[(novodf['Status'].notna()) & (novodf['Status'] != "Status") ].to_dict("records")
 
     def form_centaurus_unique(self,papel,dt_i,dt_f):
         form_centaurus = {
@@ -269,22 +269,19 @@ class MapsCentaurus(Maps):
         urltela = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/bookmarkable/centaurus.web.pages.consulta.movimentacao.cota.fundo.ConsultaMovimentacaoCotaFundo?1"
         ext_form =   "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?1-1.IFormSubmitListener-mainForm"
         excel_get = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?2-IResourceListener-report-report_exporter-elements-1-cell"
-        with requests.Session() as s:
-            url = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main'
-            r = s.get(url)
-            soup = BeautifulSoup(r.content, 'html.parser')
-            x = soup.find('form')['action']
-            # Making my posting requesting
-            r = s.post(x, data = self.formlogin())
-            r = s.get(urltela)
+        with self.maps_login() as s:
+            r = s.get(urltela)            
             r = s.post(ext_form,form)
-            r = s.get(excel_get)
-            df = pd.read_excel(BytesIO(r.content),skiprows=4)
-            df['mnemonico'] = papelcota
-            # return df[(df['Status'].notna()) & (df['Status'] != "Status") ].to_dict()
-            return self.ajustar_df(df)
-            
-
+            r = s.get(excel_get)       
+            df1 = pd.read_excel(BytesIO(r.content),skiprows=4 , engine='openpyxl')
+            df2 = pd.read_excel(BytesIO(r.content),skiprows=2 , engine='openpyxl')
+            df2.columns = df1.columns
+            df2['data'] =  dt_i
+            if df2.empty:
+                return [{"resultado":  "Sem Movimentos"}]
+            else:            
+                df2['mnemonico'] = papelcota
+                return self.ajustar_df(df2)
       
     def posicao_movimentacoes(self,data,papel_cota):
         form =  {
@@ -307,6 +304,26 @@ class MapsCentaurus(Maps):
                 return df[df['Tipo Pessoa'].notna()].to_dict()
             except Exception as e:
                 return "na"
+
+    def get_investidor(self):
+
+        with self.maps_login() as s:
+            url_1 = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/bookmarkable/centaurus.web.pages.cadastro.investidor.PesquisaInvestidor?1"
+            csv = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?1-IResourceListener-mainForm-pesquisa-report_exporter-elements-3-cell"
+            url_2 = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?1-2.IFormSubmitListener-mainForm"
+            url_3 = "https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/bookmarkable/centaurus.web.pages.cadastro.investidor.PesquisaInvestidor?2"
+            r = s.get(url_1)
+            r = s.get(csv)
+
+            df = pd.read_csv(BytesIO(r.content),delimiter=";")
+            df['cpf_cnpj_jcot'] = df['CNPJ/CPF'].apply(lambda x : x.replace(".","").replace("/","").replace("-",""))
+        
+            return df
+
+
+            
+
+
 
 
 
@@ -345,21 +362,28 @@ class MapsCentaurus(Maps):
 
 
     def get_posicao_consolidada(self,papelcota,df):
-        with requests.Session() as s:
-            url = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main'
-            r = s.get(url)
-            soup = BeautifulSoup(r.content, 'html.parser')
-            x = soup.find('form')['action']
-            r = s.post(x, data = self.formlogin())
-            pos_centaurus = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/bookmarkable/centaurus.web.pages.consulta.fundo.posicao_consolidado.ConsultaPosicaoConsolidado?1'
-            r = s.get(pos_centaurus)
-            cent_bram = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?1-1.IFormSubmitListener-mainForm='
-            r = s.post(cent_bram, data = self.form_centaurus_unique(papelcota,df,df))
-            table_soup = BeautifulSoup(r.content, 'html.parser')
-            r = s.get("https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?2-IResourceListener-report-report_exporter-elements-2-cell")
-            dataframe = pd.read_csv(BytesIO(r.content),delimiter=";")
-            return dataframe
-         
+        try:
+            with requests.Session() as s:
+                url = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main'
+                r = s.get(url)
+                soup = BeautifulSoup(r.content, 'html.parser')
+                x = soup.find('form')['action']
+                r = s.post(x, data = self.formlogin())
+                pos_centaurus = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/bookmarkable/centaurus.web.pages.consulta.fundo.posicao_consolidado.ConsultaPosicaoConsolidado?1'
+                r = s.get(pos_centaurus)
+                cent_bram = 'https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?1-1.IFormSubmitListener-mainForm='
+                r = s.post(cent_bram, data = self.form_centaurus_unique(papelcota,df,df))
+                table_soup = BeautifulSoup(r.content, 'html.parser')
+                r = s.get("https://ot.cloud.mapsfinancial.com/pegasuspassivo/main/wicket/page?2-IResourceListener-report-report_exporter-elements-2-cell")
+                dataframe = pd.read_csv(BytesIO(r.content),delimiter=";")
+                return dataframe.to_dict('records')[0]
+        except:
+            return {
+                "Quantidade": 0 , 
+                "Principal": 0 , 
+                "Saldo Bruto":  0
+            }
+            
 
             
 

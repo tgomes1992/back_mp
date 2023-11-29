@@ -11,7 +11,7 @@ myclient = MongoClient("mongodb://Thiago.Conceicao:PZV%7BTaKR1j8n@OTAPLICRJ04/")
 
 def atualizar_investidor():
 
-    atualizacao_investidor = MapsCentaurus("thiago.conceicao","tAman2021**")
+    atualizacao_investidor = MapsCentaurus("thiago.conceicao","tAman2025**")
     df = atualizacao_investidor.get_investidor()
     base = df.to_dict("records")
     mydb = myclient["backup_maps"]
@@ -35,8 +35,9 @@ def get_investidores(nome):
 
 def gerar_planilha_importacao(papelcota , cd_fundo ,  data , path):
 
-    col = myclient['movimentos_abertos']['XP_SO_FIP_-_CLASSE_B'].find({"data": data})
+    col = myclient['movimentos_abertos2'][papelcota.replace(" ","_")].find({"data": data})
     df = pd.DataFrame.from_dict(col)
+    # print(df)
     df['cotista'] = df['investidor'].apply(get_investidores)
     df['fundo'] = cd_fundo
     df['valor'] = df['Valor Bruto'].apply(abs)
@@ -44,35 +45,48 @@ def gerar_planilha_importacao(papelcota , cd_fundo ,  data , path):
     df['qtdcotas'] = df['Quantidade'].apply(abs)
     df['tipo'] = df["Tipo Operação"]
     df['data'] = df['data'].apply(lambda x: datetime.strptime(x , "%d/%m/%Y").strftime("%Y-%m-%d"))    
+
     # filtro = df['Tipo Operação'] != "COME-COTAS"
     df[[ 'data' ,  'tipo'  ,  'cotista' , "fundo"  , 'liquidacao'  , 'valor' , 'qtdcotas' ]].to_excel(f'{path}/{data.replace("/","")}.xlsx' , index=False)
 
 
 
+    return df[[ 'data' ,  'tipo'  ,  'cotista' , "fundo"  , 'liquidacao'  , 'valor' , 'qtdcotas' ]].to_dict("records")
 
-# with open('fundos_backup.txt','r') as arquivo:
-#     for item in arquivo:
-#         fundo =  item.replace("\n","")        
-#         print (fundo)
-#         data_inicial = datetime(2022,5,9)
-#         movimentos = ExtracaoMovimentacao(data_inicial, myclient)
-#         movimentos.movimentos_fundos_abertos(fundo)
+
+with open('fundos_backup.txt','r') as arquivo:
+    for item in arquivo:
+        fundo =  item.replace("\n","")        
+        print (fundo)
+        data_inicial = datetime(2023,3,1)
+        movimentos = ExtracaoMovimentacao(data_inicial, myclient)
+        movimentos.movimentos_fundos_abertos(fundo)
       
 
 
 
-data_inicial = datetime(2022,5,9)
-data_final = datetime.today()
+data_inicial = datetime(2023,3,1)
+
+data_final = datetime(2023,7,12)
+
 atualizar_investidor()
 
-while data_inicial < data_final:
+item = []
+while data_inicial <= data_final:
     try:
-        print (data_inicial)
-        gerar_planilha_importacao("XP SO FIP - CLASSE B" ,  '32211_CLB' , data_inicial.strftime("%d/%m/%Y") , "xpso")
+        # print (data_inicial)
+        dados = gerar_planilha_importacao("OT SOBERANO" ,  '1944' , data_inicial.strftime("%d/%m/%Y") , "OT SOBERANO")
+        for d in dados:
+
+            item.append(d)
         data_inicial = data_inicial + timedelta(days=1)
 
     except Exception as e :
         data_inicial = data_inicial + timedelta(days=1)
+        print (e)
         continue
 
 
+df = pd.DataFrame.from_dict(item)
+
+df.to_excel("importar_jcot.xlsx")

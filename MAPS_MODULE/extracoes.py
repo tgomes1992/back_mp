@@ -272,8 +272,9 @@ class MapsCentaurus(Maps):
         with self.maps_login() as s:
             r = s.get(urltela)            
             r = s.post(ext_form,form)
-            r = s.get(excel_get)       
+            r = s.get(excel_get)     
             df1 = pd.read_excel(BytesIO(r.content),skiprows=4 , engine='openpyxl')
+            print(df1)
             df2 = pd.read_excel(BytesIO(r.content),skiprows=2 , engine='openpyxl')
             df2.columns = df1.columns
             df2['data'] =  dt_i
